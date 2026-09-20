@@ -1,0 +1,1662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Create ISO 9660 disk images from folders entirely in your browser.">
+<title>Folder to ISO 9660</title>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+    margin:0;
+    min-height:100%;
+}
+
+body{
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:#f3f4f6;
+    color:#111827;
+    padding:32px 16px;
+}
+
+main{
+    width:min(900px,100%);
+    margin:auto;
+}
+
+header{
+    margin-bottom:24px;
+}
+
+h1{
+    margin:0 0 8px;
+    font-size:32px;
+    letter-spacing:-.03em;
+}
+
+.subtitle{
+    margin:0;
+    color:#6b7280;
+}
+
+.card{
+    background:white;
+    border:1px solid #d1d5db;
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+
+.controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+button{
+    appearance:none;
+    border:1px solid #9ca3af;
+    background:#fff;
+    color:#111827;
+    border-radius:7px;
+    padding:10px 16px;
+    font:inherit;
+    cursor:pointer;
+}
+
+button:hover:not(:disabled){
+    background:#f9fafb;
+}
+
+button:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+}
+
+.primary{
+    background:#111827;
+    border-color:#111827;
+    color:#fff;
+}
+
+.primary:hover:not(:disabled){
+    background:#1f2937;
+}
+
+.info{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:12px;
+}
+
+.stat{
+    background:#f9fafb;
+    border:1px solid #e5e7eb;
+    border-radius:8px;
+    padding:12px;
+}
+
+.stat-label{
+    display:block;
+    font-size:12px;
+    color:#6b7280;
+    margin-bottom:4px;
+}
+
+.stat-value{
+    font-weight:600;
+    word-break:break-word;
+}
+
+.progress{
+    height:10px;
+    background:#e5e7eb;
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:16px;
+}
+
+.progress-bar{
+    height:100%;
+    width:0%;
+    background:#111827;
+    transition:width .1s linear;
+}
+
+.status{
+    white-space:pre-wrap;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    font-size:13px;
+    color:#374151;
+}
+
+.file-list{
+    max-height:300px;
+    overflow:auto;
+    border:1px solid #e5e7eb;
+    border-radius:8px;
+    background:#fafafa;
+}
+
+.file-row{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    padding:7px 10px;
+    border-bottom:1px solid #e5e7eb;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    font-size:12px;
+}
+
+.file-row:last-child{
+    border-bottom:0;
+}
+
+.file-name{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.file-size{
+    color:#6b7280;
+    flex:none;
+}
+
+.note{
+    color:#6b7280;
+    font-size:13px;
+    line-height:1.6;
+}
+
+footer{
+    color:#6b7280;
+    text-align:center;
+    font-size:13px;
+    padding:12px 0 30px;
+}
+
+code{
+    background:#f3f4f6;
+    padding:2px 5px;
+    border-radius:4px;
+}
+
+@media(max-width:600px){
+    body{
+        padding:20px 10px;
+    }
+
+    h1{
+        font-size:26px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<main>
+
+<header>
+    <h1>Folder to ISO 9660</h1>
+    <p class="subtitle">
+        Create a standard ISO 9660 disk image directly in your browser.
+    </p>
+</header>
+
+<section class="card">
+
+    <div class="controls">
+
+        <button id="select">
+            Select Folder
+        </button>
+
+        <button id="build" class="primary" disabled>
+            Create ISO
+        </button>
+
+        <button id="clear">
+            Clear
+        </button>
+
+    </div>
+
+    <div class="progress">
+        <div id="progress" class="progress-bar"></div>
+    </div>
+
+</section>
+
+<section class="card">
+
+    <div class="info">
+
+        <div class="stat">
+            <span class="stat-label">Folder</span>
+            <span id="folder" class="stat-value">—</span>
+        </div>
+
+        <div class="stat">
+            <span class="stat-label">Files</span>
+            <span id="files" class="stat-value">0</span>
+        </div>
+
+        <div class="stat">
+            <span class="stat-label">Directories</span>
+            <span id="directories" class="stat-value">0</span>
+        </div>
+
+        <div class="stat">
+            <span class="stat-label">Data</span>
+            <span id="size" class="stat-value">0 B</span>
+        </div>
+
+    </div>
+
+</section>
+
+<section class="card">
+
+    <h2>Files</h2>
+
+    <div id="fileList" class="file-list">
+        <div class="file-row">
+            <span class="file-name">No folder selected.</span>
+        </div>
+    </div>
+
+</section>
+
+<section class="card">
+
+    <h2>Status</h2>
+
+    <div id="status" class="status">
+Ready.
+
+Select a folder to begin.
+    </div>
+
+</section>
+
+<section class="card note">
+
+    <strong>About</strong>
+
+    <p>
+        This application runs entirely in your browser.
+        Files are read locally and are not uploaded to a server.
+    </p>
+
+    <p>
+        The generated image uses the ISO 9660 filesystem and can be
+        mounted as a CD/DVD image by compatible operating systems and
+        virtual machines.
+    </p>
+
+    <p>
+        ISO 9660 filenames are normalized for compatibility. Very long
+        or unusual filenames may be shortened.
+    </p>
+
+</section>
+
+<footer>
+    Folder to ISO 9660 · Client-side utility
+</footer>
+
+</main>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Configuration
+   ============================================================ */
+
+const SECTOR_SIZE = 2048;
+
+const SYSTEM_AREA_SECTORS = 16;
+const PVD_SECTOR = 16;
+const TERMINATOR_SECTOR = 17;
+const PATH_TABLE_SECTOR = 18;
+const DIRECTORY_START_SECTOR = 20;
+
+/* ============================================================
+   State
+   ============================================================ */
+
+let rootHandle = null;
+
+let rootDirectory = null;
+
+let directories = [];
+
+let files = [];
+
+/* ============================================================
+   DOM
+   ============================================================ */
+
+const selectButton =
+    document.getElementById("select");
+
+const buildButton =
+    document.getElementById("build");
+
+const clearButton =
+    document.getElementById("clear");
+
+const progress =
+    document.getElementById("progress");
+
+const folderLabel =
+    document.getElementById("folder");
+
+const filesLabel =
+    document.getElementById("files");
+
+const directoriesLabel =
+    document.getElementById("directories");
+
+const sizeLabel =
+    document.getElementById("size");
+
+const fileList =
+    document.getElementById("fileList");
+
+const status =
+    document.getElementById("status");
+
+/* ============================================================
+   Utility
+   ============================================================ */
+
+function setStatus(value){
+    status.textContent = value;
+}
+
+function setProgress(value){
+    value = Math.max(0,Math.min(1,value));
+    progress.style.width =
+        (value * 100).toFixed(2) + "%";
+}
+
+function sleep(){
+    return new Promise(resolve => {
+        setTimeout(resolve,0);
+    });
+}
+
+function formatSize(bytes){
+
+    if(bytes < 1024)
+        return bytes + " B";
+
+    if(bytes < 1024 ** 2)
+        return (bytes / 1024).toFixed(1) + " KB";
+
+    if(bytes < 1024 ** 3)
+        return (bytes / 1024 ** 2).toFixed(1) + " MB";
+
+    return (bytes / 1024 ** 3).toFixed(2) + " GB";
+}
+
+function totalFileSize(){
+
+    return files.reduce(
+        (sum,file) => sum + file.size,
+        0
+    );
+}
+
+/* ============================================================
+   ISO binary helpers
+   ============================================================ */
+
+function le16(buffer,offset,value){
+
+    buffer[offset] =
+        value & 0xff;
+
+    buffer[offset + 1] =
+        (value >>> 8) & 0xff;
+}
+
+function be16(buffer,offset,value){
+
+    buffer[offset] =
+        (value >>> 8) & 0xff;
+
+    buffer[offset + 1] =
+        value & 0xff;
+}
+
+function both16(buffer,offset,value){
+
+    le16(buffer,offset,value);
+    be16(buffer,offset + 2,value);
+}
+
+function le32(buffer,offset,value){
+
+    buffer[offset] =
+        value & 0xff;
+
+    buffer[offset + 1] =
+        (value >>> 8) & 0xff;
+
+    buffer[offset + 2] =
+        (value >>> 16) & 0xff;
+
+    buffer[offset + 3] =
+        (value >>> 24) & 0xff;
+}
+
+function be32(buffer,offset,value){
+
+    buffer[offset] =
+        (value >>> 24) & 0xff;
+
+    buffer[offset + 1] =
+        (value >>> 16) & 0xff;
+
+    buffer[offset + 2] =
+        (value >>> 8) & 0xff;
+
+    buffer[offset + 3] =
+        value & 0xff;
+}
+
+function both32(buffer,offset,value){
+
+    le32(buffer,offset,value);
+    be32(buffer,offset + 4,value);
+}
+
+function ascii(buffer,offset,length,value){
+
+    const bytes =
+        new TextEncoder().encode(value);
+
+    const count =
+        Math.min(length,bytes.length);
+
+    for(let i = 0;i < count;i++){
+        buffer[offset + i] =
+            bytes[i];
+    }
+
+    for(let i = count;i < length;i++){
+        buffer[offset + i] = 0x20;
+    }
+}
+
+/* ============================================================
+   ISO filename handling
+   ============================================================ */
+
+function cleanName(name){
+
+    return name
+        .normalize("NFKD")
+        .replace(/[^\x20-\x7E]/g,"_")
+        .replace(/[\\/:*?"<>|]/g,"_")
+        .toUpperCase();
+}
+
+function isoFileName(name){
+
+    let value = cleanName(name);
+
+    const dot =
+        value.lastIndexOf(".");
+
+    let base;
+    let extension;
+
+    if(dot > 0){
+
+        base =
+            value.slice(0,dot);
+
+        extension =
+            value.slice(dot + 1);
+
+    }else{
+
+        base = value;
+        extension = "";
+    }
+
+    base =
+        base
+        .replace(/\./g,"")
+        .slice(0,8);
+
+    extension =
+        extension
+        .replace(/\./g,"")
+        .slice(0,3);
+
+    if(!base)
+        base = "_";
+
+    if(extension)
+        return base + "." + extension + ";1";
+
+    return base + ";1";
+}
+
+function isoDirectoryName(name){
+
+    let value =
+        cleanName(name)
+        .replace(/\./g,"");
+
+    if(!value)
+        value = "_";
+
+    return value.slice(0,31);
+}
+
+/* ============================================================
+   Directory scanning
+   ============================================================ */
+
+function createDirectory(
+    name,
+    parent,
+    path
+){
+
+    const directory = {
+
+        type:"directory",
+
+        name:name,
+
+        isoName:
+            parent === null
+                ? ""
+                : isoDirectoryName(name),
+
+        parent:parent,
+
+        path:path,
+
+        children:[],
+
+        lba:0,
+
+        size:0
+    };
+
+    directories.push(directory);
+
+    if(parent){
+        parent.children.push(directory);
+    }
+
+    return directory;
+}
+
+async function scanDirectory(
+    handle,
+    directory,
+    relativePath
+){
+
+    for await(
+        const entry of handle.values()
+    ){
+
+        const path =
+            relativePath
+                ? relativePath + "/" + entry.name
+                : entry.name;
+
+        if(entry.kind === "directory"){
+
+            const child =
+                createDirectory(
+                    entry.name,
+                    directory,
+                    path
+                );
+
+            await scanDirectory(
+                entry,
+                child,
+                path
+            );
+
+        }else if(entry.kind === "file"){
+
+            const file =
+                await entry.getFile();
+
+            const object = {
+
+                type:"file",
+
+                name:entry.name,
+
+                isoName:
+                    isoFileName(entry.name),
+
+                path:path,
+
+                parent:directory,
+
+                file:file,
+
+                size:file.size,
+
+                lba:0
+            };
+
+            files.push(object);
+
+            directory.children.push(object);
+        }
+    }
+}
+
+/* ============================================================
+   Directory sizing
+   ============================================================ */
+
+function directoryRecordLength(name){
+
+    let length =
+        33 +
+        new TextEncoder()
+            .encode(name)
+            .length;
+
+    if(name !== "\0" && name !== "\1"){
+        length++;
+    }
+
+    if(length & 1){
+        length++;
+    }
+
+    return length;
+}
+
+function calculateDirectorySize(directory){
+
+    let bytes = 0;
+
+    bytes +=
+        directoryRecordLength("\0");
+
+    bytes +=
+        directoryRecordLength("\1");
+
+    for(const child of directory.children){
+
+        bytes +=
+            directoryRecordLength(
+                child.isoName
+            );
+    }
+
+    return Math.ceil(
+        bytes / SECTOR_SIZE
+    ) * SECTOR_SIZE;
+}
+
+/* ============================================================
+   ISO directory records
+   ============================================================ */
+
+function makeDirectoryRecord(
+    name,
+    extent,
+    size,
+    isDirectory
+){
+
+    const nameBytes =
+        name === "\0" || name === "\1"
+            ? new Uint8Array([
+                name.charCodeAt(0)
+            ])
+            : new TextEncoder()
+                .encode(name);
+
+    let length =
+        33 + nameBytes.length;
+
+    if(name !== "\0" && name !== "\1"){
+        length++;
+    }
+
+    if(length & 1){
+        length++;
+    }
+
+    const record =
+        new Uint8Array(length);
+
+    record[0] = length;
+
+    record[1] = 0;
+
+    both32(
+        record,
+        2,
+        extent
+    );
+
+    both32(
+        record,
+        10,
+        size
+    );
+
+    const date =
+        new Date();
+
+    record[18] =
+        date.getFullYear() - 1900;
+
+    record[19] =
+        date.getMonth() + 1;
+
+    record[20] =
+        date.getDate();
+
+    record[21] =
+        date.getHours();
+
+    record[22] =
+        date.getMinutes();
+
+    record[23] =
+        date.getSeconds();
+
+    record[24] = 0;
+
+    record[25] =
+        isDirectory ? 2 : 0;
+
+    record[26] = 0;
+
+    record[27] = 0;
+
+    both16(
+        record,
+        28,
+        1
+    );
+
+    record[32] =
+        nameBytes.length;
+
+    record.set(
+        nameBytes,
+        33
+    );
+
+    return record;
+}
+
+/* ============================================================
+   Path table
+   ============================================================ */
+
+function getDirectoriesInPathOrder(){
+
+    return directories
+        .slice()
+        .sort((a,b) => {
+
+            if(a === rootDirectory)
+                return -1;
+
+            if(b === rootDirectory)
+                return 1;
+
+            return a.path.localeCompare(
+                b.path
+            );
+        });
+}
+
+function buildPathTable(){
+
+    const ordered =
+        getDirectoriesInPathOrder();
+
+    const numbers =
+        new Map();
+
+    ordered.forEach(
+        (directory,index) => {
+            numbers.set(
+                directory,
+                index + 1
+            );
+        }
+    );
+
+    const records = [];
+
+    let total = 0;
+
+    for(const directory of ordered){
+
+        const name =
+            directory === rootDirectory
+                ? "\0"
+                : directory.isoName;
+
+        const nameBytes =
+            name === "\0"
+                ? new Uint8Array([0])
+                : new TextEncoder()
+                    .encode(name);
+
+        let length =
+            8 + nameBytes.length;
+
+        if(length & 1)
+            length++;
+
+        const record =
+            new Uint8Array(length);
+
+        record[0] =
+            nameBytes.length;
+
+        record[1] = 0;
+
+        le32(
+            record,
+            2,
+            directory.lba
+        );
+
+        const parentNumber =
+            directory === rootDirectory
+                ? 1
+                : numbers.get(
+                    directory.parent
+                );
+
+        le16(
+            record,
+            6,
+            parentNumber
+        );
+
+        record.set(
+            nameBytes,
+            8
+        );
+
+        records.push(record);
+
+        total += length;
+    }
+
+    return {
+        bytes:total,
+        records:records
+    };
+}
+
+/* ============================================================
+   UI file list
+   ============================================================ */
+
+function updateFileList(){
+
+    fileList.innerHTML = "";
+
+    if(files.length === 0){
+
+        const row =
+            document.createElement("div");
+
+        row.className = "file-row";
+
+        row.innerHTML =
+            "<span class='file-name'>" +
+            "No files selected." +
+            "</span>";
+
+        fileList.appendChild(row);
+
+        return;
+    }
+
+    for(const file of files){
+
+        const row =
+            document.createElement("div");
+
+        row.className = "file-row";
+
+        const name =
+            document.createElement("span");
+
+        name.className =
+            "file-name";
+
+        name.textContent =
+            file.path;
+
+        const size =
+            document.createElement("span");
+
+        size.className =
+            "file-size";
+
+        size.textContent =
+            formatSize(file.size);
+
+        row.append(
+            name,
+            size
+        );
+
+        fileList.appendChild(row);
+    }
+}
+
+function updateStats(){
+
+    folderLabel.textContent =
+        rootHandle
+            ? rootHandle.name
+            : "—";
+
+    filesLabel.textContent =
+        files.length;
+
+    directoriesLabel.textContent =
+        Math.max(
+            0,
+            directories.length - 1
+        );
+
+    sizeLabel.textContent =
+        formatSize(
+            totalFileSize()
+        );
+}
+
+/* ============================================================
+   ISO creation
+   ============================================================ */
+
+async function createISO(){
+
+    if(!rootDirectory || files.length === 0){
+        return;
+    }
+
+    selectButton.disabled = true;
+    buildButton.disabled = true;
+    clearButton.disabled = true;
+
+    setProgress(0);
+
+    setStatus(
+        "Preparing filesystem..."
+    );
+
+    /*
+        Calculate directory sizes.
+    */
+
+    for(
+        const directory
+        of getDirectoriesInPathOrder()
+    ){
+
+        directory.size =
+            calculateDirectorySize(
+                directory
+            );
+    }
+
+    /*
+        Path table must be placed after
+        the descriptor area.
+    */
+
+    let pathTablePlaceholder =
+        buildPathTable();
+
+    const pathTableSectors =
+        Math.ceil(
+            pathTablePlaceholder.bytes /
+            SECTOR_SIZE
+        );
+
+    /*
+        Directory data starts after
+        path table.
+    */
+
+    let currentSector =
+        DIRECTORY_START_SECTOR +
+        pathTableSectors;
+
+    for(
+        const directory
+        of getDirectoriesInPathOrder()
+    ){
+
+        directory.lba =
+            currentSector;
+
+        currentSector +=
+            directory.size /
+            SECTOR_SIZE;
+    }
+
+    /*
+        Files follow directories.
+    */
+
+    for(const file of files){
+
+        file.lba =
+            currentSector;
+
+        currentSector +=
+            Math.ceil(
+                file.size /
+                SECTOR_SIZE
+            );
+    }
+
+    const totalSectors =
+        currentSector;
+
+    const totalBytes =
+        totalSectors *
+        SECTOR_SIZE;
+
+    setStatus(
+        "Preparing ISO...\n\n" +
+        "Files: " +
+        files.length +
+        "\nDirectories: " +
+        (directories.length - 1) +
+        "\nData: " +
+        formatSize(totalFileSize()) +
+        "\nImage: " +
+        formatSize(totalBytes)
+    );
+
+    /*
+        Browser memory check.
+    */
+
+    if(totalBytes > 1024 * 1024 * 1024){
+
+        const okay =
+            confirm(
+                "The generated ISO will be larger than 1 GB.\n\n" +
+                "The browser may need several GB of memory.\n\n" +
+                "Continue?"
+            );
+
+        if(!okay){
+
+            selectButton.disabled = false;
+            buildButton.disabled = false;
+            clearButton.disabled = false;
+
+            return;
+        }
+    }
+
+    let image;
+
+    try{
+
+        image =
+            new Uint8Array(
+                totalBytes
+            );
+
+    }catch(error){
+
+        setStatus(
+            "Unable to allocate the ISO image.\n\n" +
+            "The folder may be too large for the available browser memory."
+        );
+
+        selectButton.disabled = false;
+        buildButton.disabled = false;
+        clearButton.disabled = false;
+
+        return;
+    }
+
+    /*
+        Rebuild path table after LBAs
+        have been assigned.
+    */
+
+    const pathTable =
+        buildPathTable();
+
+    /*
+        Primary Volume Descriptor.
+    */
+
+    const pvd =
+        PVD_SECTOR *
+        SECTOR_SIZE;
+
+    image[pvd] = 1;
+
+    ascii(
+        image,
+        pvd + 1,
+        5,
+        "CD001"
+    );
+
+    image[pvd + 6] = 1;
+
+    ascii(
+        image,
+        pvd + 8,
+        32,
+        "FOLDER TO ISO 9660"
+    );
+
+    ascii(
+        image,
+        pvd + 40,
+        32,
+        "ISO9660"
+    );
+
+    ascii(
+        image,
+        pvd + 80,
+        32,
+        "FOLDERTOISO"
+    );
+
+    ascii(
+        image,
+        pvd + 318,
+        128,
+        "FOLDER TO ISO 9660"
+    );
+
+    /*
+        Volume space size.
+    */
+
+    both32(
+        image,
+        pvd + 80,
+        totalSectors
+    );
+
+    /*
+        Volume set size.
+    */
+
+    both16(
+        image,
+        pvd + 120,
+        1
+    );
+
+    /*
+        Volume sequence number.
+    */
+
+    both16(
+        image,
+        pvd + 124,
+        1
+    );
+
+    /*
+        Logical block size.
+    */
+
+    both16(
+        image,
+        pvd + 128,
+        SECTOR_SIZE
+    );
+
+    /*
+        Path table size.
+    */
+
+    both32(
+        image,
+        pvd + 132,
+        pathTable.bytes
+    );
+
+    /*
+        Location of little-endian
+        path table.
+    */
+
+    le32(
+        image,
+        pvd + 140,
+        PATH_TABLE_SECTOR
+    );
+
+    /*
+        Location of big-endian
+        path table.
+    */
+
+    be32(
+        image,
+        pvd + 148,
+        PATH_TABLE_SECTOR
+    );
+
+    /*
+        Root directory record.
+    */
+
+    const rootRecord =
+        makeDirectoryRecord(
+            "\0",
+            rootDirectory.lba,
+            rootDirectory.size,
+            true
+        );
+
+    image.set(
+        rootRecord,
+        pvd + 156
+    );
+
+    /*
+        Path table.
+    */
+
+    let pathOffset =
+        PATH_TABLE_SECTOR *
+        SECTOR_SIZE;
+
+    for(
+        const record
+        of pathTable.records
+    ){
+
+        image.set(
+            record,
+            pathOffset
+        );
+
+        pathOffset +=
+            record.length;
+    }
+
+    /*
+        Directory records.
+    */
+
+    for(
+        const directory
+        of getDirectoriesInPathOrder()
+    ){
+
+        let offset =
+            directory.lba *
+            SECTOR_SIZE;
+
+        const self =
+            makeDirectoryRecord(
+                "\0",
+                directory.lba,
+                directory.size,
+                true
+            );
+
+        image.set(
+            self,
+            offset
+        );
+
+        offset += self.length;
+
+        const parent =
+            directory.parent
+                ? makeDirectoryRecord(
+                    "\1",
+                    directory.parent.lba,
+                    directory.parent.size,
+                    true
+                )
+                : makeDirectoryRecord(
+                    "\1",
+                    directory.lba,
+                    directory.size,
+                    true
+                );
+
+        image.set(
+            parent,
+            offset
+        );
+
+        offset += parent.length;
+
+        for(
+            const child
+            of directory.children
+        ){
+
+            const record =
+                makeDirectoryRecord(
+                    child.isoName,
+                    child.lba,
+                    child.type === "directory"
+                        ? child.size
+                        : child.size,
+                    child.type === "directory"
+                );
+
+            image.set(
+                record,
+                offset
+            );
+
+            offset +=
+                record.length;
+        }
+    }
+
+    /*
+        Volume descriptor terminator.
+    */
+
+    const terminator =
+        TERMINATOR_SECTOR *
+        SECTOR_SIZE;
+
+    image[terminator] = 255;
+
+    ascii(
+        image,
+        terminator + 1,
+        5,
+        "CD001"
+    );
+
+    image[terminator + 6] = 1;
+
+    /*
+        File data.
+    */
+
+    let completedBytes = 0;
+
+    const totalData =
+        totalFileSize();
+
+    for(let i = 0;i < files.length;i++){
+
+        const file = files[i];
+
+        setStatus(
+            "Reading file " +
+            (i + 1) +
+            " of " +
+            files.length +
+            "\n\n" +
+            file.path
+        );
+
+        const data =
+            new Uint8Array(
+                await file.file.arrayBuffer()
+            );
+
+        const destination =
+            file.lba *
+            SECTOR_SIZE;
+
+        image.set(
+            data,
+            destination
+        );
+
+        completedBytes +=
+            data.length;
+
+        setProgress(
+            totalData === 0
+                ? 1
+                : completedBytes /
+                  totalData
+        );
+
+        await sleep();
+    }
+
+    /*
+        Create downloadable file.
+    */
+
+    setStatus(
+        "Finalizing ISO..."
+    );
+
+    const blob =
+        new Blob(
+            [image],
+            {
+                type:
+                    "application/x-iso9660-image"
+            }
+        );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const link =
+        document.createElement("a");
+
+    link.href = url;
+
+    link.download =
+        "image.iso";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    link.remove();
+
+    setTimeout(
+        () => URL.revokeObjectURL(url),
+        60000
+    );
+
+    setProgress(1);
+
+    setStatus(
+        "ISO created successfully.\n\n" +
+        "Filename: image.iso\n" +
+        "Filesystem: ISO 9660\n" +
+        "Files: " +
+        files.length +
+        "\nDirectories: " +
+        (directories.length - 1) +
+        "\nImage size: " +
+        formatSize(totalBytes) +
+        "\n\n" +
+        "The ISO is ready to mount as a CD/DVD image."
+    );
+
+    selectButton.disabled = false;
+    buildButton.disabled = false;
+    clearButton.disabled = false;
+}
+
+/* ============================================================
+   Select folder
+   ============================================================ */
+
+selectButton.addEventListener(
+    "click",
+    async () => {
+
+        if(
+            !("showDirectoryPicker" in window)
+        ){
+
+            setStatus(
+                "This browser does not support folder selection.\n\n" +
+                "Use a recent Chromium-based browser."
+            );
+
+            return;
+        }
+
+        try{
+
+            rootHandle =
+                await window.showDirectoryPicker();
+
+            directories = [];
+            files = [];
+
+            rootDirectory =
+                createDirectory(
+                    rootHandle.name,
+                    null,
+                    ""
+                );
+
+            setStatus(
+                "Scanning folder..."
+            );
+
+            await scanDirectory(
+                rootHandle,
+                rootDirectory,
+                ""
+            );
+
+            updateStats();
+            updateFileList();
+
+            buildButton.disabled =
+                files.length === 0;
+
+            setProgress(0);
+
+            setStatus(
+                "Folder ready.\n\n" +
+                "Select “Create ISO” to build the ISO 9660 image."
+            );
+
+        }catch(error){
+
+            if(
+                error &&
+                error.name ===
+                "AbortError"
+            ){
+                return;
+            }
+
+            setStatus(
+                "Folder selection failed.\n\n" +
+                error.message
+            );
+        }
+    }
+);
+
+/* ============================================================
+   Build
+   ============================================================ */
+
+buildButton.addEventListener(
+    "click",
+    async () => {
+
+        try{
+
+            await createISO();
+
+        }catch(error){
+
+            console.error(error);
+
+            setStatus(
+                "ISO creation failed.\n\n" +
+                error.message
+            );
+
+            selectButton.disabled = false;
+            buildButton.disabled = false;
+            clearButton.disabled = false;
+        }
+    }
+);
+
+/* ============================================================
+   Clear
+   ============================================================ */
+
+clearButton.addEventListener(
+    "click",
+    () => {
+
+        rootHandle = null;
+        rootDirectory = null;
+        directories = [];
+        files = [];
+
+        folderLabel.textContent = "—";
+        filesLabel.textContent = "0";
+        directoriesLabel.textContent = "0";
+        sizeLabel.textContent = "0 B";
+
+        fileList.innerHTML =
+            "<div class='file-row'>" +
+            "<span class='file-name'>" +
+            "No folder selected." +
+            "</span>" +
+            "</div>";
+
+        setProgress(0);
+
+        setStatus(
+            "Ready.\n\n" +
+            "Select a folder to begin."
+        );
+
+        buildButton.disabled = true;
+    }
+);
+</script>
+
+</body>
+</html>
